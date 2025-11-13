@@ -1,0 +1,10 @@
+name: diverso_conversion
+channels:
+  - defaults
+  - bioconda
+dependencies:
+  - python=3.12
+  - pip
+  - setuptools
+  - pip:
+    - -e .[dev]

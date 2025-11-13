@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "diverso_conversion"
+description = "A tool to merge patient data with genomic results for the EquiRefBlood project."
+authors = [
+    { name = "Core Unit Bioinformatics", email="cubimed@rub.de" },
+    { name = "Dirk Winkelhardt", email="dirk.winkelhardt@rub.de" }
+]
+requires-python = ">=3.12"
+version = "1.0.0"
+dependencies = [
+    "numpy~=2.3.1",
+    "openpyxl~=3.1.5",
+    "pandas~=2.3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black",
+    "pandas-stubs",
+    "pylint",
+]
+
