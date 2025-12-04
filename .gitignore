@@ -5,6 +5,10 @@
 .idea/
 .vscode/
 
+# Builds
+dist-mac-silicon/
+dist-windows/
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

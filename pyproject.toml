@@ -22,5 +22,6 @@ dev = [
     "black",
     "pandas-stubs",
     "pylint",
+    "pyinstaller"
 ]
 
