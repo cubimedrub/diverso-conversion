@@ -10,8 +10,74 @@ RECRUITING_PREFIX: str = "rekrutierung_"
 QUESTIONNAIRE_PREFIX: str = "befragung_"
 
 
+def read_dataframe_from_file(
+    file_path: Path,
+    separator: str,
+) -> pd.DataFrame:
+    """
+    Reads a DataFrame from a file based on its extension.
+    Parameters
+    ----------
+    file_path : Path
+        Path to the input file.
+    separator : str
+        Separator to use when reading CSV files.
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame read from the file.
+    """
+    match file_path.suffix:
+        case ".xlsx":
+            return pd.read_excel(file_path, engine="openpyxl")
+        case ".tsv":
+            return pd.read_csv(file_path, sep="\t")
+        case ".csv":
+            return pd.read_csv(file_path, sep=separator)
+        case _:
+            raise ValueError(
+                (
+                    f"Unsupported patient file format: {file_path.suffix}. "
+                    "Supported formats are .xlsx, .tsv, .csv"
+                )
+            )
+
+
+def write_dataframe_to_file(
+    df: pd.DataFrame,
+    file_path: Path,
+):
+    """
+    Writes a DataFrame to a file based on its extension.
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame to write to the file.
+    file_path : Path
+        Path to the output file.
+    """
+    match file_path.suffix:
+        case ".xlsx":
+            df.to_excel(file_path, index=False)
+        case ".tsv":
+            df.to_csv(file_path, sep="\t", index=False)
+        case ".csv":
+            df.to_csv(file_path, index=False)
+        case _:
+            raise ValueError(
+                (
+                    f"Unsupported output file format: {file_path.suffix}. "
+                    "Supported formats are .xlsx, .tsv, .csv"
+                )
+            )
+
+
 def conversion(
-    patient_file: Path, output_file: Path, column_whitelist: Set[str], logger: Logger
+    patient_file: Path,
+    output_file: Path,
+    column_whitelist: Set[str],
+    patient_file_separator: str,
+    logger: Logger,
 ):
     """
     Runs the conversion process by opening the patient file,
@@ -44,7 +110,12 @@ def conversion(
     logging_file_handler = FileHandler(log_file, encoding="utf-8", mode="w")
     logger.addHandler(logging_file_handler)
 
-    df = pd.read_excel(patient_file)
+    try:
+        df = read_dataframe_from_file(patient_file, patient_file_separator)
+    except ValueError as e:
+        logger.error("%s", e)
+        return
+
     patient_ids = df["pat_id"].unique().tolist()
 
     updated_questionnaire_dfs = []
@@ -91,7 +162,7 @@ def conversion(
     df = pd.concat(updated_questionnaire_dfs, ignore_index=True)
 
     if output_file.is_file():
-        existing_df = pd.read_excel(output_file)
+        existing_df = read_dataframe_from_file(output_file, ",")
         columns_of_existing_df = list(existing_df.columns)
         columns_of_existing_df.sort()
         columns_of_new_df = list(df.columns)
@@ -106,17 +177,29 @@ def conversion(
                 "The output file %s already exists with the same columns. Appending and remove duplicates keeping the first one.",
                 str(output_file),
             )
-            backup_file = output_file.with_suffix(".backup.xlsx")
+            backup_file_suffix = output_file.suffix
+            backup_file = output_file.with_suffix(f".backup.{backup_file_suffix}")
             logger.info("Backing up existing file to %s", str(backup_file))
             existing_df.to_excel(backup_file, index=False)
 
             df = pd.concat([existing_df, df], ignore_index=True)
             df.drop_duplicates(inplace=True)
-            df.to_excel(output_file, index=False)
+
+            try:
+                write_dataframe_to_file(df, output_file)
+                logger.info(
+                    "Appended data written to %s successfully.", str(output_file)
+                )
+            except ValueError as e:
+                logger.error("%s", e)
 
     else:
         logger.info("Writing merged data to %s", str(output_file))
-        df.to_excel(output_file, index=False)
+        try:
+            write_dataframe_to_file(df, output_file)
+            logger.info("Data written to %s successfully.", str(output_file))
+        except ValueError as e:
+            logger.error("%s", e)
 
     logger.info("Conversion completed successfully.")
 

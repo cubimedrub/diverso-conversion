@@ -27,6 +27,12 @@ class Cli:
             default=[],
             help="Path to the column whitelist file",
         )
+        parser.add_argument(
+            "--patient-file-separator",
+            type=str,
+            default=",",
+            help="Separator used in the patient file if it is a CSV",
+        )
 
         # Bundled app might geht some unknown args, so we parse them but ignore them
         self.args, _ = parser.parse_known_args()
@@ -59,6 +65,7 @@ class Cli:
                 self.args.patient_file,
                 self.args.output_file,
                 set(self.args.column_whitelist),
+                self.args.patient_file_separator,
                 self.logger,
             )
         except (FileNotFoundError, NotADirectoryError) as e:

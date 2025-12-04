@@ -27,6 +27,7 @@ class Gui:
 
         # Initialize variables used in the GUIs
         self.patient_file_path = StringVar()
+        self.patient_file_separator = StringVar(value=",")
         self.column_whitelist = StringVar()
         self.output_file_path = StringVar()
 
@@ -44,7 +45,7 @@ class Gui:
 
         ttk.Entry(
             frm,
-            textvariable=self.column_whitelist,
+            textvariable=self.patient_file_separator,
             state="enabled",
             width=100,
         ).grid(
@@ -52,28 +53,47 @@ class Gui:
             row=1,
             columnspan=3,
         )
+        ttk.Label(
+            frm,
+            text="Separator (only applied on CSVs)",
+        ).grid(column=3, row=1, sticky="w")
+
+        ttk.Entry(
+            frm,
+            textvariable=self.column_whitelist,
+            state="enabled",
+            width=100,
+        ).grid(
+            column=0,
+            row=10,
+            columnspan=3,
+        )
+        ttk.Label(
+            frm,
+            text="column whitelist (comma separated, empty = all columns)",
+        ).grid(column=3, row=10, sticky="w")
 
         ttk.Entry(
             frm, textvariable=self.output_file_path, state="disabled", width=100
         ).grid(
             column=0,
-            row=2,
+            row=20,
             columnspan=3,
         )
-        ttk.Button(frm, text="output file", command=self.select_output_file).grid(
-            column=3, row=2, sticky="w"
-        )
+        ttk.Button(
+            frm, text="output file (.csv|.xlsx|.tsv)", command=self.select_output_file
+        ).grid(column=3, row=20, sticky="w")
 
         ttk.Button(frm, text="Start", command=self.run_conversion).grid(
-            column=0, row=10, sticky="e"
+            column=0, row=30, sticky="e"
         )
         ttk.Button(frm, text="Quit", command=root.destroy).grid(
-            column=3, row=10, sticky="w"
+            column=3, row=30, sticky="w"
         )
 
         logger_st = ScrolledText.ScrolledText(frm, state="disabled")
         logger_st.configure(font="TkFixedFont")
-        logger_st.grid(column=0, row=20, columnspan=4)
+        logger_st.grid(column=0, row=40, columnspan=4)
 
         logging_widget = LoggerWidget(logger_st, level=logger.level)
         logger.addHandler(logging_widget)
@@ -97,13 +117,19 @@ class Gui:
     def select_output_file(self):
         """Open a file dialog to select the output file."""
 
-        filetypes = (("Excel file", "*.xlsx"),)
+        filetypes = (
+            ("Excel file", "*.xlsx"),
+            ("TSV file", "*.tsv"),
+            ("CSV file", "*.csv"),
+            ("All files", "*.*"),
+        )
 
         initial_dir = Path.home()
         initial_file = None
         if self.output_file_path.get():
-            initial_dir = None
-            initial_file = Path(self.output_file_path.get())
+            output_file_path = Path(self.output_file_path.get())
+            initial_dir = output_file_path.parent
+            initial_file = output_file_path.name
 
         filepath = filedialog.asksaveasfilename(
             title="select output file",
@@ -111,10 +137,13 @@ class Gui:
             initialfile=initial_file,
             defaultextension=".xlsx",
             filetypes=filetypes,
+            confirmoverwrite=True,
         )
 
+        self.logger.debug("Selected output file: %s", filepath)
+
         if len(filepath) > 0:
-            self.output_file_path.set(str(Path(filepath)))
+            self.output_file_path.set(filepath)
 
     def run_conversion(self):
         """
@@ -134,6 +163,7 @@ class Gui:
                 Path(self.patient_file_path.get()),
                 Path(self.output_file_path.get()),
                 column_whitelist,
+                self.patient_file_separator.get(),
                 self.logger,
             )
         except (FileNotFoundError, NotADirectoryError) as e:
