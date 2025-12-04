@@ -161,6 +161,12 @@ def conversion(
 
     df = pd.concat(updated_questionnaire_dfs, ignore_index=True)
 
+    # Convert height from cm to m. Considering no human is taller than 3 meters and not NaN
+    if "pat_height" in df.columns:
+        df["pat_height"] = df["pat_height"].apply(
+            lambda x: x / 100.0 if x is not pd.NA and x > 3.0 else x
+        )
+
     if output_file.is_file():
         existing_df = read_dataframe_from_file(output_file, ",")
         columns_of_existing_df = list(existing_df.columns)
